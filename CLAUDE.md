@@ -15,13 +15,13 @@ Releases here are GitHub Release assets (binaries + `.sha256` + `.sigstore.jsonl
 
 | Repo | Visibility | Role |
 |---|---|---|
-| `simplemotion/install` | public | Installer scripts + `get.simplemotion.com` Pages |
+| `simplemotion/install` | public | Installer scripts + `install.simplemotion.com` Pages |
 | `simplemotion/release` | public | Production binaries |
 | `simplemotion/preview` | public | Preview / beta binaries |
 | `simplemotion/private` | private | Internal-stable binaries |
 | `simplemotion/testing` | private | In-flight test builds |
 
-Each channel has its own `releases/latest` namespace — no prerelease-flag coordination across repos. Consumers reach this channel via `--channel release` in the installer scripts at `get.simplemotion.com`.
+Each channel has its own `releases/latest` namespace — no prerelease-flag coordination across repos. Consumers reach this channel via `--channel release` in the installer scripts at `install.simplemotion.com`.
 
 ## How releases land here
 
