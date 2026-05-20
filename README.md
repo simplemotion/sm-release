@@ -42,7 +42,7 @@ Releases arrive automatically via `repository_dispatch` from per-product source 
 | `vX.Y.Z-private-NNN` | `simplemotion/private` |
 | `vX.Y.Z-testing-NNN` | `simplemotion/testing` |
 
-The receiver workflow here (`publish-release.yml`) downloads the source-run artifacts and creates a GitHub Release.
+The receiver workflow here (`sm-publish-release.yml`) downloads the source-run artifacts and creates a GitHub Release.
 
 ## Reporting issues
 

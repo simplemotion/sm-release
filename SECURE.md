@@ -13,14 +13,14 @@ This is the **public** binary-distribution surface for SimpleMotion's **release*
 ## Threat model
 
 - **Adversary substitutes the binary at rest.** Mitigated by SHA256 sidecar verification on every download and by sigstore build-provenance verification against the per-product source repo.
-- **Adversary smuggles a malicious release via dispatch.** `publish-release.yml` whitelists the source-repo owner (`3400-0000-SM-Software`). A dispatch from any other owner is rejected.
+- **Adversary smuggles a malicious release via dispatch.** `sm-publish-release.yml` whitelists the source-repo owner (`3400-0000-SM-Software`). A dispatch from any other owner is rejected.
 - **Adversary compromises the SM-Binary-Bridge GitHub App.** Would gain `Contents:Write` on this repo. Mitigation: App's private key lives only in `BRIDGE_APP_PRIVATE_KEY` secret here and on dispatching source repos, base64-wrapped per the SimpleMotion convention. Rotate via `sm-get/scripts/admin/set-bridge-app-secrets.sh`.
 - **Adversary publishes a malicious preview as a public release.** N/A for the release channel — releases here are stable.
 
 ## Secrets handling
 
 - No credentials are committed to this repo.
-- `BRIDGE_APP_PRIVATE_KEY` (secret) and `BRIDGE_APP_CLIENT_ID` (variable) are the only secrets used by `publish-release.yml`. PEM follows the SimpleMotion `b64:<base64-payload>` envelope convention.
+- `BRIDGE_APP_PRIVATE_KEY` (secret) and `BRIDGE_APP_CLIENT_ID` (variable) are the only secrets used by `sm-publish-release.yml`. PEM follows the SimpleMotion `b64:<base64-payload>` envelope convention.
 - All SimpleMotion credentials follow the `b64:<base64-payload>` envelope convention.
 
 ## Consumer verification
