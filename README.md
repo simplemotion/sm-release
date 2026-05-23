@@ -1,4 +1,4 @@
-# simplemotion/release
+# simplemotion/sm-release
 
 **Release channel** binary-distribution surface for SimpleMotion products.
 
@@ -25,11 +25,11 @@ Use the SimpleMotion installer at `install.simplemotion.com` and pass `--channel
 bash -c "$(curl -fsSL https://install.simplemotion.com/sm-welcome.sh)" sm-welcome --channel release
 ```
 
-The installer (in [`simplemotion/install`](https://github.com/simplemotion/install)) handles platform detection, SHA verification, sigstore attestation verification, and install. Don't fetch binaries directly from this repo unless you're verifying them out-of-band.
+The installer (in [`simplemotion/sm-install`](https://github.com/simplemotion/sm-install)) handles platform detection, SHA verification, sigstore attestation verification, and install. Don't fetch binaries directly from this repo unless you're verifying them out-of-band.
 
 ## Verification
 
-See [`simplemotion/install/SECURE.md`](https://github.com/simplemotion/install/blob/main/SECURE.md) for the consumer verification recipe (`gh attestation verify --bundle …`).
+See [`simplemotion/sm-install/SECURE.md`](https://github.com/simplemotion/sm-install/blob/main/SECURE.md) for the consumer verification recipe (`gh attestation verify --bundle …`).
 
 ## How releases get here
 
@@ -37,15 +37,15 @@ Releases arrive automatically via `repository_dispatch` from per-product source 
 
 | Tag pattern | Target repo |
 |---|---|
-| `vX.Y.Z` | `simplemotion/release` |
-| `vX.Y.Z-preview-NNN` | `simplemotion/preview` |
-| `vX.Y.Z-private-NNN` | `simplemotion/private` |
-| `vX.Y.Z-testing-NNN` | `simplemotion/testing` |
+| `vX.Y.Z` | `simplemotion/sm-release` |
+| `vX.Y.Z-preview-NNN` | `simplemotion/sm-preview` |
+| `vX.Y.Z-private-NNN` | `simplemotion/sm-private` |
+| `vX.Y.Z-testing-NNN` | `simplemotion/sm-testing` |
 
 The receiver workflow here (`sm-publish-release.yml`) downloads the source-run artifacts and creates a GitHub Release.
 
 ## Reporting issues
 
-- **Distribution / install bugs:** open an issue on [`simplemotion/install`](https://github.com/simplemotion/install).
+- **Distribution / install bugs:** open an issue on [`simplemotion/sm-install`](https://github.com/simplemotion/sm-install).
 - **Product bugs:** per-product source repo under `3400-0000-SM-Software` (internal).
 - **Security:** email **security@simplemotion.com**.

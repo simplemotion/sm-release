@@ -1,6 +1,6 @@
-# SECURE — simplemotion/release
+# SECURE — simplemotion/sm-release
 
-> Security posture, threat model, and secrets-handling notes for `simplemotion/release`.
+> Security posture, threat model, and secrets-handling notes for `simplemotion/sm-release`.
 
 ## What this repo serves
 
@@ -8,7 +8,7 @@ This is the **public** binary-distribution surface for SimpleMotion's **release*
 
 - No source code.
 - No build pipelines (those live in the per-product source repos).
-- No installer scripts (those live in `simplemotion/install`).
+- No installer scripts (those live in `simplemotion/sm-install`).
 
 ## Threat model
 
@@ -25,7 +25,7 @@ This is the **public** binary-distribution surface for SimpleMotion's **release*
 
 ## Consumer verification
 
-See [`simplemotion/install/SECURE.md`](https://github.com/simplemotion/install/blob/main/SECURE.md) for the full `gh attestation verify --bundle …` recipe. The verification is offline (Sigstore TUF root + Fulcio cert chain travel inside the bundle) and works without GitHub API access.
+See [`simplemotion/sm-install/SECURE.md`](https://github.com/simplemotion/sm-install/blob/main/SECURE.md) for the full `gh attestation verify --bundle …` recipe. The verification is offline (Sigstore TUF root + Fulcio cert chain travel inside the bundle) and works without GitHub API access.
 
 ## Reporting issues
 
