@@ -56,27 +56,31 @@ The App must be installed on `simplemotion` with `Contents:Write` on this repo, 
 
 Before adding new top-level files or changing `sm-publish-release.yml`'s dispatch contract — the contract is consumed by every source repo's `release.yml`.
 
-
 ## Promotion ladder
 
-Builds are promoted UP the channel ladder **without rebuilding** — the
-same signed artifacts move forward, so what ships is byte-identical to
-what was tested:
+Builds climb the ladder **without rebuilding** — the same signed
+artifacts move forward. The two **public** channels (`preview`,
+`release`) only ever show **real releases**; all candidate churn stays
+on the **internal** channels, so the public never sees a non-final build.
 
-    develop → testing → preview → release(-rcN) → GA
+| Stage   | Repo                      | Visibility | Holds                            | Tag form                          |
+|---------|---------------------------|------------|----------------------------------|-----------------------------------|
+| develop | `simplemotion/sm-develop` | internal   | earliest dev builds              | `v0.1.0-develop-N`                |
+| testing | `simplemotion/sm-testing` | internal   | test builds + release candidates | `v0.1.0-testing-N`, `v0.1.0-rcN` |
+| preview | `simplemotion/sm-preview` | public     | public preview / beta releases   | `v0.1.0-preview-N`                |
+| release | `simplemotion/sm-release` | public     | **GA only**                      | `v0.1.0` (bare, Latest)           |
 
-Tags (zero-padded 3-digit iteration; rc is 1-based):
+Flow: `develop → testing (→ rcN) → preview → release (GA)`. Release
+candidates (`v0.1.0-rcN`) are vetted **internally on testing**; once
+blessed they promote to a public `preview` release and finally to the
+bare **`v0.1.0` GA** on `release` (always marked Latest).
 
-| Stage   | Repo                      | Tag form               |
-|---------|---------------------------|------------------------|
-| develop | `simplemotion/sm-develop` | `v0.1.0-develop-NNN`   |
-| testing | `simplemotion/sm-testing` | `v0.1.0-testing-NNN`   |
-| preview | `simplemotion/sm-preview` | `v0.1.0-preview-NNN`   |
-| release | `simplemotion/sm-release` | `v0.1.0-release-rcN`   |
-| GA      | `simplemotion/sm-release` | `v0.1.0` (bare, latest)|
+**No GitHub prerelease flag is used anywhere** — identity is the repo
+(and its visibility), and the public repos simply never receive a
+non-preview / non-GA tag. `sm-release` accepts **only bare `vX.Y.Z`
+(GA)** promotion targets; cut rc/preview builds on `testing`/`preview`.
 
-Each receiving channel repo (testing/preview/release) has a
-`.github/workflows/sm-promote.yml` (manual dispatch) that copies a
-release from the previous channel and re-publishes it here under the
-next tag. **develop** is the entry point — source repos in
-`3400-0000-SM-Software` dispatch builds there via `publish-release.yml`.
+Each receiving channel repo has `.github/workflows/sm-promote.yml`
+(manual dispatch) that copies a release from the previous channel into
+this one under the next tag. `develop` is the entry point — source
+repos in `3400-0000-SM-Software` dispatch builds there.
