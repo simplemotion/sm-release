@@ -1,0 +1,156 @@
+name: Promote release
+
+# Promotes an existing release UP the channel ladder by copying its
+# assets into this channel and cutting a new release with this channel's
+# tag. The ladder is:
+#
+#   develop → testing → preview → release(-rcN) → GA (bare vX.Y.Z)
+#
+# No rebuild: the SAME signed artifacts are moved forward, so what ships
+# to users is byte-identical to what was tested. Manual trigger only.
+#
+# Tag scheme (zero-padded 3-digit iteration; rc is 1-based):
+#   v0.1.0-develop-001 → v0.1.0-testing-001 → v0.1.0-preview-001
+#     → v0.1.0-release-rc1 → … → v0.1.0   (bare = GA, sm-welcome only)
+#
+# Auth: the SM-Binary-Bridge App (same PEM/Client-ID as publish-release).
+# The minted token is scoped to the source channel repo (Contents:Read)
+# and THIS repo (Contents:Write). The App is installed org-wide on the
+# channel repos, so no per-promotion install change is needed.
+
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: Package name (e.g. sm-welcome)
+        required: true
+      source_tag:
+        description: Tag to promote FROM (e.g. v0.1.0-develop-003)
+        required: true
+      target_tag:
+        description: New tag for THIS channel (e.g. v0.1.0-testing-001; bare vX.Y.Z = GA)
+        required: true
+      source_repo:
+        description: Override source repo (default simplemotion/sm-preview). Use this repo's own name to finalise an rc → GA.
+        required: false
+        default: simplemotion/sm-preview
+
+permissions:
+  contents: write
+
+concurrency:
+  group: promote-${{ inputs.package }}-${{ inputs.target_tag }}
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve and validate inputs
+        id: inputs
+        run: |
+          set -euo pipefail
+          PACKAGE='${{ inputs.package }}'
+          SRC='${{ inputs.source_tag }}'
+          DST='${{ inputs.target_tag }}'
+          SOURCE_REPO='${{ inputs.source_repo }}'
+
+          [[ "$PACKAGE" =~ ^[a-zA-Z0-9_-]+$ ]] || { echo "::error::invalid package: $PACKAGE"; exit 1; }
+          for t in "$SRC" "$DST"; do
+            [[ "$t" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?$ ]] || { echo "::error::invalid tag (need vX.Y.Z[-suffix]): $t"; exit 1; }
+          done
+          [[ "$SOURCE_REPO" =~ ^[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+$ ]] || { echo "::error::invalid source_repo: $SOURCE_REPO"; exit 1; }
+          SOURCE_NAME="${SOURCE_REPO#*/}"
+
+          # Tag namespace: the primary product (sm-welcome) uses bare tags
+          # and owns releases/latest; other packages carry a ${package}- prefix.
+          if [[ "$PACKAGE" == sm-welcome ]]; then
+            SRC_TAG="$SRC"; DST_TAG="$DST"
+          else
+            SRC_TAG="${PACKAGE}-${SRC}"; DST_TAG="${PACKAGE}-${DST}"
+          fi
+
+          # GA = a bare vX.Y.Z target for the primary product → mark latest.
+          if [[ "$DST" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ && "$PACKAGE" == sm-welcome ]]; then
+            MAKE_LATEST=true
+          else
+            MAKE_LATEST=false
+          fi
+
+          {
+            echo "source_repo=$SOURCE_REPO"
+            echo "source_name=$SOURCE_NAME"
+            echo "src_tag=$SRC_TAG"
+            echo "dst_tag=$DST_TAG"
+            echo "make_latest=$MAKE_LATEST"
+          } >> "$GITHUB_OUTPUT"
+          echo "Promoting $PACKAGE: $SOURCE_REPO@$SRC_TAG → $GITHUB_REPOSITORY@$DST_TAG (latest=$MAKE_LATEST)"
+
+      - name: Decode bridge App PEM
+        id: decode-pem
+        env:
+          PEM_WRAPPED: ${{ secrets.BRIDGE_APP_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          val="${PEM_WRAPPED#b64:}"
+          if [[ "$val" == "$PEM_WRAPPED" ]]; then
+            echo "::error::BRIDGE_APP_PRIVATE_KEY is missing the 'b64:' prefix." >&2
+            exit 1
+          fi
+          pem=$(printf '%s' "$val" | base64 -d)
+          while IFS= read -r line; do
+            [ -n "$line" ] && echo "::add-mask::$line"
+          done <<< "$pem"
+          {
+            echo 'pem<<__END_OF_PEM__'
+            printf '%s\n' "$pem"
+            echo '__END_OF_PEM__'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Mint bridge App token (read source + write this)
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.BRIDGE_APP_CLIENT_ID }}
+          private-key: ${{ steps.decode-pem.outputs.pem }}
+          owner: simplemotion
+          repositories: |
+            ${{ steps.inputs.outputs.source_name }}
+            ${{ github.event.repository.name }}
+
+      - name: Download source release assets
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          SOURCE_REPO: ${{ steps.inputs.outputs.source_repo }}
+          SRC_TAG: ${{ steps.inputs.outputs.src_tag }}
+        run: |
+          set -euo pipefail
+          STAGING="$RUNNER_TEMP/promote-assets"
+          mkdir -p "$STAGING"
+          gh release download "$SRC_TAG" --repo "$SOURCE_REPO" --dir "$STAGING" --pattern '*'
+          echo "=== assets to promote ==="
+          ls -la "$STAGING"
+          [ -n "$(ls -A "$STAGING")" ] || { echo "::error::no assets found on $SOURCE_REPO@$SRC_TAG"; exit 1; }
+          echo "staging=$STAGING" >> "$GITHUB_OUTPUT"
+        id: stage
+
+      - name: Create or update release on this channel
+        env:
+          GH_TOKEN:    ${{ steps.app-token.outputs.token }}
+          DST_TAG:     ${{ steps.inputs.outputs.dst_tag }}
+          MAKE_LATEST: ${{ steps.inputs.outputs.make_latest }}
+          STAGING:     ${{ steps.stage.outputs.staging }}
+        run: |
+          set -euo pipefail
+          if gh release view "$DST_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "::notice::Release $DST_TAG exists; clobbering assets."
+            gh release upload "$DST_TAG" --repo "$GITHUB_REPOSITORY" --clobber "$STAGING"/*
+          else
+            gh release create "$DST_TAG" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "$DST_TAG" \
+              --generate-notes \
+              --latest="$MAKE_LATEST" \
+              "$STAGING"/*
+          fi
+          echo "::notice::Promoted to $GITHUB_REPOSITORY@$DST_TAG (latest=$MAKE_LATEST)"

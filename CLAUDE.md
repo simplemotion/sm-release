@@ -18,14 +18,14 @@ Releases here are GitHub Release assets (binaries + `.sha256` + `.sigstore.jsonl
 | `simplemotion/sm-install` | public | Installer scripts + `install.simplemotion.com` Pages |
 | `simplemotion/sm-release` | public | Production binaries |
 | `simplemotion/sm-preview` | public | Preview / beta binaries |
-| `simplemotion/sm-private` | private | Internal-stable binaries |
+| `simplemotion/sm-develop` | internal | Development — earliest builds |
 | `simplemotion/sm-testing` | private | In-flight test builds |
 
 Each channel has its own `releases/latest` namespace — no prerelease-flag coordination across repos. Consumers reach this channel via `--channel release` in the installer scripts at `install.simplemotion.com`.
 
 ## How releases land here
 
-Releases arrive via `repository_dispatch` from per-product source repos (in the `3400-0000-SM-Software` org). Source-repo `release.yml` workflows tag-route to the channel-appropriate target: bare `vX.Y.Z` → `simplemotion/sm-release`; `vX.Y.Z-preview-NNN` → `simplemotion/sm-preview`; `vX.Y.Z-private-NNN` → `simplemotion/sm-private`; `vX.Y.Z-testing-NNN` → `simplemotion/sm-testing`.
+Releases arrive via `repository_dispatch` from per-product source repos (in the `3400-0000-SM-Software` org). Source-repo `release.yml` workflows tag-route to the channel-appropriate target: bare `vX.Y.Z` → `simplemotion/sm-release`; `vX.Y.Z-preview-NNN` → `simplemotion/sm-preview`; `vX.Y.Z-develop-NNN` → `simplemotion/sm-develop`; `vX.Y.Z-testing-NNN` → `simplemotion/sm-testing`.
 
 The receiver is `.github/workflows/sm-publish-release.yml`. It uses the SM-Binary-Bridge App to download artifacts from the source run and `gh release create` them here.
 
@@ -55,3 +55,28 @@ The App must be installed on `simplemotion` with `Contents:Write` on this repo, 
 ## When in doubt, ask
 
 Before adding new top-level files or changing `sm-publish-release.yml`'s dispatch contract — the contract is consumed by every source repo's `release.yml`.
+
+
+## Promotion ladder
+
+Builds are promoted UP the channel ladder **without rebuilding** — the
+same signed artifacts move forward, so what ships is byte-identical to
+what was tested:
+
+    develop → testing → preview → release(-rcN) → GA
+
+Tags (zero-padded 3-digit iteration; rc is 1-based):
+
+| Stage   | Repo                      | Tag form               |
+|---------|---------------------------|------------------------|
+| develop | `simplemotion/sm-develop` | `v0.1.0-develop-NNN`   |
+| testing | `simplemotion/sm-testing` | `v0.1.0-testing-NNN`   |
+| preview | `simplemotion/sm-preview` | `v0.1.0-preview-NNN`   |
+| release | `simplemotion/sm-release` | `v0.1.0-release-rcN`   |
+| GA      | `simplemotion/sm-release` | `v0.1.0` (bare, latest)|
+
+Each receiving channel repo (testing/preview/release) has a
+`.github/workflows/sm-promote.yml` (manual dispatch) that copies a
+release from the previous channel and re-publishes it here under the
+next tag. **develop** is the entry point — source repos in
+`3400-0000-SM-Software` dispatch builds there via `publish-release.yml`.
