@@ -39,7 +39,7 @@ Releases arrive automatically via `repository_dispatch` from per-product source 
 |---|---|
 | `vX.Y.Z` | `simplemotion/sm-release` |
 | `vX.Y.Z-preview-NNN` | `simplemotion/sm-preview` |
-| `vX.Y.Z-private-NNN` | `simplemotion/sm-private` |
+| `vX.Y.Z-develop-NNN` | `simplemotion/sm-develop` |
 | `vX.Y.Z-testing-NNN` | `simplemotion/sm-testing` |
 
 The receiver workflow here (`sm-publish-release.yml`) downloads the source-run artifacts and creates a GitHub Release.
