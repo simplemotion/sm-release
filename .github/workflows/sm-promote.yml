@@ -4,14 +4,14 @@ name: Promote release
 # assets into this channel and cutting a new release with this channel's
 # tag. The ladder is:
 #
-#   develop → testing → preview → release(-rcN) → GA (bare vX.Y.Z)
+#   develop → testing → preview → release(-NNN) → GA (bare vX.Y.Z)
 #
 # No rebuild: the SAME signed artifacts are moved forward, so what ships
 # to users is byte-identical to what was tested. Manual trigger only.
 #
-# Tag scheme (zero-padded 3-digit iteration; rc is 1-based):
+# Tag scheme (zero-padded 3-digit iteration):
 #   v0.1.0-develop-001 → v0.1.0-testing-001 → v0.1.0-preview-001
-#     → v0.1.0-release-rc1 → … → v0.1.0   (bare = GA, sm-welcome only)
+#     → v0.1.0-release-001 → … → v0.1.0   (bare = GA, sm-welcome only)
 #
 # Auth: the SM-Binary-Bridge App (same PEM/Client-ID as publish-release).
 # The minted token is scoped to the source channel repo (Contents:Read)
@@ -31,7 +31,7 @@ on:
         description: New tag for THIS channel (e.g. v0.1.0-testing-001; bare vX.Y.Z = GA)
         required: true
       source_repo:
-        description: Override source repo (default simplemotion/sm-preview). Use this repo's own name to finalise an rc → GA.
+        description: Override source repo (default simplemotion/sm-preview). Use this repo's own name to finalise a release-NNN → GA.
         required: false
         default: simplemotion/sm-preview
 
@@ -63,8 +63,8 @@ jobs:
           SOURCE_NAME="${SOURCE_REPO#*/}"
 
           # release is the PUBLIC, GA-only channel: reject any non-bare
-          # (rc/preview/testing/develop) target — those belong on the
-          # internal channels.
+          # (release-NNN/preview/testing/develop) target — those belong on
+          # the internal channels.
           [[ "$DST" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::sm-release accepts only bare GA tags (vX.Y.Z); got $DST"; exit 1; }
 
           # Tag namespace: the primary product (sm-welcome) uses bare tags
