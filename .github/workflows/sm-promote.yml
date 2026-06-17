@@ -9,9 +9,12 @@ name: Promote release
 # No rebuild: the SAME signed artifacts are moved forward, so what ships
 # to users is byte-identical to what was tested. Manual trigger only.
 #
-# Tag scheme (zero-padded 3-digit iteration):
-#   v0.1.0-develop-001 → v0.1.0-testing-001 → v0.1.0-preview-001
-#     → v0.1.0-release-001 → … → v0.1.0   (bare = GA, sm-welcome only)
+# Tag scheme — the develop build's NNN is carried UNCHANGED up the ladder
+# (same NNN = same artifact). The release repo holds staging candidates as
+# vX.Y.Z-release-NNN (prerelease, never latest); a final promote turns ONE of
+# them into bare vX.Y.Z (GA = GitHub's latest):
+#   v0.1.0-develop-134 → v0.1.0-testing-134 → v0.1.0-preview-134
+#     → v0.1.0-release-134 (staging in sm-release) → v0.1.0 (GA, = latest)
 #
 # Auth: the SM-Binary-Bridge App (same PEM/Client-ID as publish-release).
 # The minted token is scoped to the source channel repo (Contents:Read)
@@ -25,10 +28,10 @@ on:
         description: Package name (e.g. sm-welcome)
         required: true
       source_tag:
-        description: Tag to promote FROM (e.g. v0.1.0-develop-003)
+        description: Tag to promote FROM (staging from sm-preview e.g. v0.1.0-preview-134; GA from this repo e.g. v0.1.0-release-134)
         required: true
       target_tag:
-        description: New tag for THIS channel (e.g. v0.1.0-testing-001; bare vX.Y.Z = GA)
+        description: New tag — vX.Y.Z-release-NNN (staging, from sm-preview) or bare vX.Y.Z (GA, from a release-NNN)
         required: true
       source_repo:
         description: Override source repo (default simplemotion/sm-preview). Use this repo's own name to finalise a release-NNN → GA.
@@ -62,10 +65,20 @@ jobs:
           [[ "$SOURCE_REPO" =~ ^[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+$ ]] || { echo "::error::invalid source_repo: $SOURCE_REPO"; exit 1; }
           SOURCE_NAME="${SOURCE_REPO#*/}"
 
-          # release is the PUBLIC, GA-only channel: reject any non-bare
-          # (release-NNN/preview/testing/develop) target — those belong on
-          # the internal channels.
-          [[ "$DST" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::sm-release accepts only bare GA tags (vX.Y.Z); got $DST"; exit 1; }
+          # release is the PUBLIC channel and accepts exactly two target shapes:
+          #   vX.Y.Z-release-NNN  a staging candidate (prerelease, never latest),
+          #                       promoted FROM sm-preview;
+          #   vX.Y.Z              GA — the ONE candidate finalised to the public
+          #                       version (latest, not prerelease), promoted FROM
+          #                       this repo's own vX.Y.Z-release-NNN.
+          # Anything else (preview/testing/develop or other suffixes) is rejected.
+          if [[ "$DST" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            IS_GA=true
+          elif [[ "$DST" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-release-[0-9]+$ ]]; then
+            IS_GA=false
+          else
+            echo "::error::sm-release accepts only vX.Y.Z (GA) or vX.Y.Z-release-NNN (staging); got $DST"; exit 1
+          fi
 
           # Tag namespace: the primary product (sm-welcome) uses bare tags
           # and owns releases/latest; other packages carry a ${package}- prefix.
@@ -75,11 +88,15 @@ jobs:
             SRC_TAG="${PACKAGE}-${SRC}"; DST_TAG="${PACKAGE}-${DST}"
           fi
 
-          # GA = a bare vX.Y.Z target for the primary product → mark latest.
-          if [[ "$DST" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ && "$PACKAGE" == sm-welcome ]]; then
-            MAKE_LATEST=true
+          # Only the GA (bare vX.Y.Z) of the primary product is GitHub's "latest".
+          # Staging candidates are prereleases so releases/latest never serves an
+          # unshipped build.
+          if [[ "$IS_GA" == true && "$PACKAGE" == sm-welcome ]]; then
+            MAKE_LATEST=true;  PRERELEASE=false
+          elif [[ "$IS_GA" == true ]]; then
+            MAKE_LATEST=false; PRERELEASE=false
           else
-            MAKE_LATEST=false
+            MAKE_LATEST=false; PRERELEASE=true
           fi
 
           {
@@ -88,6 +105,7 @@ jobs:
             echo "src_tag=$SRC_TAG"
             echo "dst_tag=$DST_TAG"
             echo "make_latest=$MAKE_LATEST"
+            echo "prerelease=$PRERELEASE"
           } >> "$GITHUB_OUTPUT"
           echo "Promoting $PACKAGE: $SOURCE_REPO@$SRC_TAG → $GITHUB_REPOSITORY@$DST_TAG (latest=$MAKE_LATEST)"
 
@@ -144,6 +162,7 @@ jobs:
           GH_TOKEN:    ${{ steps.app-token.outputs.token }}
           DST_TAG:     ${{ steps.inputs.outputs.dst_tag }}
           MAKE_LATEST: ${{ steps.inputs.outputs.make_latest }}
+          PRERELEASE:  ${{ steps.inputs.outputs.prerelease }}
           STAGING:     ${{ steps.stage.outputs.staging }}
         run: |
           set -euo pipefail
@@ -151,11 +170,13 @@ jobs:
             echo "::notice::Release $DST_TAG exists; clobbering assets."
             gh release upload "$DST_TAG" --repo "$GITHUB_REPOSITORY" --clobber "$STAGING"/*
           else
+            FLAGS=(--latest="$MAKE_LATEST")
+            [[ "$PRERELEASE" == true ]] && FLAGS+=(--prerelease)
             gh release create "$DST_TAG" \
               --repo "$GITHUB_REPOSITORY" \
               --title "$DST_TAG" \
               --generate-notes \
-              --latest="$MAKE_LATEST" \
+              "${FLAGS[@]}" \
               "$STAGING"/*
           fi
-          echo "::notice::Promoted to $GITHUB_REPOSITORY@$DST_TAG (latest=$MAKE_LATEST)"
+          echo "::notice::Promoted to $GITHUB_REPOSITORY@$DST_TAG (latest=$MAKE_LATEST, prerelease=$PRERELEASE)"
