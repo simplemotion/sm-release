@@ -20,6 +20,17 @@ name: Promote release
 # The minted token is scoped to the source channel repo (Contents:Read)
 # and THIS repo (Contents:Write). The App is installed org-wide on the
 # channel repos, so no per-promotion install change is needed.
+#
+# GA finalisation additionally runs a `bump-source` job that advances the
+# SOURCE repo's Cargo.toml version base to X.Y.(Z+1) via a bump PR — the
+# source repos carry no bare GA tags, so sm-ci derives the develop base
+# from Cargo.toml verbatim; without the bump, post-GA pushes keep stamping
+# vX.Y.Z-develop-NNN over a version that has already shipped. Auth: a
+# second bridge-App token minted against the source org (the App is
+# installed there with Contents:Write for private-dep reads). The App has
+# no pull_requests permission today, so the PR-create step degrades to a
+# warning with a compare URL until that permission is granted; the bump
+# branch itself is always pushed.
 
 on:
   workflow_dispatch:
@@ -180,3 +191,134 @@ jobs:
               "$STAGING"/*
           fi
           echo "::notice::Promoted to $GITHUB_REPOSITORY@$DST_TAG (latest=$MAKE_LATEST, prerelease=$PRERELEASE)"
+
+  # After a GA finalise (bare vX.Y.Z target), open a bump PR in the SOURCE
+  # repo advancing Cargo.toml to X.Y.(Z+1) so the develop base moves past the
+  # shipped version. Runs only for packages with a source-repo mapping below;
+  # idempotent (skips when the version is already advanced or the bump branch
+  # already exists). The GA release is complete before this job starts — a
+  # failure here never affects the published artifacts.
+  bump-source:
+    needs: promote
+    if: ${{ !contains(inputs.target_tag, '-') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve source repo and next version
+        id: map
+        run: |
+          set -euo pipefail
+          case '${{ inputs.package }}' in
+            sm-welcome) SRC_GIT_REPO="3400-0000-SM-Software/3400-0009-SM-Welcome" ;;
+            *)
+              echo "::notice::no source-repo mapping for package '${{ inputs.package }}'; skipping Cargo bump."
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              exit 0
+              ;;
+          esac
+          GA='${{ inputs.target_tag }}'
+          [[ "$GA" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]] || { echo "::error::not a bare GA tag: $GA"; exit 1; }
+          NEXT="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.$(( BASH_REMATCH[3] + 1 ))"
+          {
+            echo "skip=false"
+            echo "src_git_repo=$SRC_GIT_REPO"
+            echo "src_git_owner=${SRC_GIT_REPO%%/*}"
+            echo "src_git_name=${SRC_GIT_REPO#*/}"
+            echo "next=$NEXT"
+          } >> "$GITHUB_OUTPUT"
+          echo "GA $GA for '${{ inputs.package }}' → bump $SRC_GIT_REPO Cargo.toml to $NEXT"
+
+      - name: Decode bridge App PEM
+        if: steps.map.outputs.skip == 'false'
+        id: decode-pem
+        env:
+          PEM_WRAPPED: ${{ secrets.BRIDGE_APP_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          val="${PEM_WRAPPED#b64:}"
+          if [[ "$val" == "$PEM_WRAPPED" ]]; then
+            echo "::error::BRIDGE_APP_PRIVATE_KEY is missing the 'b64:' prefix." >&2
+            exit 1
+          fi
+          pem=$(printf '%s' "$val" | base64 -d)
+          while IFS= read -r line; do
+            [ -n "$line" ] && echo "::add-mask::$line"
+          done <<< "$pem"
+          {
+            echo 'pem<<__END_OF_PEM__'
+            printf '%s\n' "$pem"
+            echo '__END_OF_PEM__'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Mint bridge App token (write source git repo)
+        if: steps.map.outputs.skip == 'false'
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.BRIDGE_APP_CLIENT_ID }}
+          private-key: ${{ steps.decode-pem.outputs.pem }}
+          owner: ${{ steps.map.outputs.src_git_owner }}
+          repositories: ${{ steps.map.outputs.src_git_name }}
+
+      - name: Open Cargo bump PR in source repo
+        if: steps.map.outputs.skip == 'false'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          SRC_GIT_REPO: ${{ steps.map.outputs.src_git_repo }}
+          NEXT: ${{ steps.map.outputs.next }}
+          PKG: ${{ inputs.package }}
+          GA_TAG: ${{ inputs.target_tag }}
+        run: |
+          set -euo pipefail
+          BRANCH="bump-cargo-v${NEXT}"
+
+          git config --global url."https://x-access-token:${GH_TOKEN}@github.com/".insteadOf "https://github.com/"
+          git clone --quiet --depth 1 "https://github.com/${SRC_GIT_REPO}.git" src
+          cd src
+
+          if git ls-remote --exit-code origin "refs/heads/$BRANCH" >/dev/null 2>&1; then
+            echo "::notice::bump branch $BRANCH already exists on $SRC_GIT_REPO; skipping."
+            exit 0
+          fi
+
+          CURRENT=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)
+          if [[ "$CURRENT" != "${GA_TAG#v}" ]]; then
+            echo "::notice::Cargo.toml already at $CURRENT (GA was ${GA_TAG#v}); skipping bump."
+            exit 0
+          fi
+
+          # Bump the [package] version (first `version = "…"` in the root
+          # manifest) and the matching package entry in Cargo.lock.
+          sed -i "0,/^version = \".*\"/s//version = \"${NEXT}\"/" Cargo.toml
+          awk -v pkg="$PKG" -v ver="$NEXT" '
+            prev == "name = \"" pkg "\"" && $0 ~ /^version = / { sub(/version = ".*"/, "version = \"" ver "\"") }
+            { prev = $0; print }
+          ' Cargo.lock > Cargo.lock.new && mv Cargo.lock.new Cargo.lock
+
+          # Best-effort CHANGE.md row (keeps the repo-hygiene version gate
+          # aligned with Cargo.toml). Inserted after the first table separator.
+          ROW="| v${NEXT} | $(date -u +%F) | sm-binary-bridge (automated) | **Version base bump only — no functional change.** Automated post-GA bump from sm-release's promote workflow after \`${GA_TAG}\` was finalised: advances the develop base so post-GA pushes stamp \`v${NEXT}-develop-NNN\` instead of re-using the shipped version. \`Cargo.toml\` + matching \`Cargo.lock\` entry + changelog only. |"
+          if [ -f CHANGE.md ] && grep -qE '^\|[-| ]+\|$' CHANGE.md; then
+            awk -v row="$ROW" 'BEGIN{done=0} {print} !done && /^\|[-| ]+\|$/ {print row; done=1}' CHANGE.md > CHANGE.md.new && mv CHANGE.md.new CHANGE.md
+          else
+            echo "::warning::CHANGE.md table separator not found; row not inserted."
+          fi
+
+          BOT="sm-binary-bridge[bot]"
+          BOT_ID=$(gh api "users/${BOT}" --jq .id)
+          git config user.name "$BOT"
+          git config user.email "${BOT_ID}+${BOT}@users.noreply.github.com"
+          git checkout -q -b "$BRANCH"
+          git add Cargo.toml Cargo.lock CHANGE.md
+          git commit -q -m "Bump version base to ${NEXT} after GA ${GA_TAG}"
+          git push -q -u origin "$BRANCH"
+
+          if gh pr create \
+              --repo "$SRC_GIT_REPO" \
+              --title "Bump version base to ${NEXT} after GA ${GA_TAG}" \
+              --body "Automated post-GA bump from \`simplemotion/sm-release\`'s promote workflow. GA \`${GA_TAG}\` is finalised; this advances the develop base so post-GA pushes stamp \`v${NEXT}-develop-NNN\` instead of re-using the shipped version. \`Cargo.toml\` + matching \`Cargo.lock\` entry + CHANGE.md row only." \
+              --head "$BRANCH" \
+              --base main; then
+            echo "::notice::bump PR opened on $SRC_GIT_REPO"
+          else
+            echo "::warning::branch $BRANCH pushed, but PR creation failed — the sm-binary-bridge App likely lacks the Pull requests permission. Open it manually: https://github.com/${SRC_GIT_REPO}/compare/main...${BRANCH}?expand=1"
+          fi
