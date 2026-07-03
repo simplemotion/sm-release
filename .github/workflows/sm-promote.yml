@@ -252,9 +252,12 @@ jobs:
       - name: Mint bridge App token (write source git repo)
         if: steps.map.outputs.skip == 'false'
         id: app-token
-        uses: actions/create-github-app-token@v1
+        # v3, not the deprecated v1 the promote job still uses: this is the
+        # only token in this workflow used for git-over-HTTPS against another
+        # org, the pattern the exec-bumper workflow runs on v3.
+        uses: actions/create-github-app-token@v3
         with:
-          app-id: ${{ vars.BRIDGE_APP_CLIENT_ID }}
+          client-id: ${{ vars.BRIDGE_APP_CLIENT_ID }}
           private-key: ${{ steps.decode-pem.outputs.pem }}
           owner: ${{ steps.map.outputs.src_git_owner }}
           repositories: ${{ steps.map.outputs.src_git_name }}
@@ -273,6 +276,7 @@ jobs:
 
           git config --global url."https://x-access-token:${GH_TOKEN}@github.com/".insteadOf "https://github.com/"
           git clone --quiet --depth 1 "https://github.com/${SRC_GIT_REPO}.git" src
+          echo "checkpoint: cloned $SRC_GIT_REPO"
           cd src
 
           if git ls-remote --exit-code origin "refs/heads/$BRANCH" >/dev/null 2>&1; then
@@ -310,7 +314,9 @@ jobs:
           git checkout -q -b "$BRANCH"
           git add Cargo.toml Cargo.lock CHANGE.md
           git commit -q -m "Bump version base to ${NEXT} after GA ${GA_TAG}"
+          echo "checkpoint: manifests bumped to ${NEXT}, pushing $BRANCH"
           git push -q -u origin "$BRANCH"
+          echo "checkpoint: branch pushed"
 
           if gh pr create \
               --repo "$SRC_GIT_REPO" \
