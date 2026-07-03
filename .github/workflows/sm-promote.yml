@@ -21,16 +21,24 @@ name: Promote release
 # and THIS repo (Contents:Write). The App is installed org-wide on the
 # channel repos, so no per-promotion install change is needed.
 #
-# GA finalisation additionally runs a `bump-source` job that advances the
-# SOURCE repo's Cargo.toml version base to X.Y.(Z+1) via a bump PR — the
-# source repos carry no bare GA tags, so sm-ci derives the develop base
-# from Cargo.toml verbatim; without the bump, post-GA pushes keep stamping
-# vX.Y.Z-develop-NNN over a version that has already shipped. Auth: a
-# second bridge-App token minted against the source org (the App is
-# installed there with Contents:Write for private-dep reads). The App has
-# no pull_requests permission today, so the PR-create step degrades to a
-# warning with a compare URL until that permission is granted; the bump
-# branch itself is always pushed.
+# GA finalisation additionally runs a `bump-source` job that rolls the
+# SOURCE repo over to the next version line:
+#   1. pushes the bare GA tag (vX.Y.Z) to the source repo, at the commit
+#      the promoted artifact was built from (resolved via the source
+#      repo's vX.Y.Z-develop-NNN tag). sm-ci derives develop versions as
+#      "one patch ahead of the last bare GA tag, NNN = commits since it",
+#      so this RESETS the develop counter: the next main push stamps
+#      vX.Y.(Z+1)-develop-001. In sm-ci a bare-tag push is an explicit
+#      no-op (no build/dispatch), so the tag is inert beyond versioning.
+#   2. opens a bump PR advancing Cargo.toml to X.Y.(Z+1), keeping the
+#      binary's --version in step with the tag-derived develop base.
+# Auth: a second bridge-App token minted against the source org (the App
+# is installed there with Contents:Write for private-dep reads, plus
+# Pull requests: Read & write for the bump PR). If PR creation fails, the
+# step degrades to a warning with a compare URL; the branch is still
+# pushed. NOTE: once a source repo carries a bare GA tag, sm-ci's base
+# comes from the TAG, not Cargo.toml — a deliberate minor/major bump
+# needs a matching GA (or tag surgery), not just a Cargo.toml edit.
 
 on:
   workflow_dispatch:
@@ -261,6 +269,38 @@ jobs:
           private-key: ${{ steps.decode-pem.outputs.pem }}
           owner: ${{ steps.map.outputs.src_git_owner }}
           repositories: ${{ steps.map.outputs.src_git_name }}
+
+      # Resets sm-ci's develop counter: with the bare GA tag in the source
+      # repo, the next main push derives v<GA+1 patch>-develop-001 (commits
+      # since the tag) instead of continuing the from-root count.
+      - name: Tag source repo with the GA version
+        if: steps.map.outputs.skip == 'false'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          SRC_GIT_REPO: ${{ steps.map.outputs.src_git_repo }}
+          GA_TAG: ${{ inputs.target_tag }}
+          SOURCE_TAG: ${{ inputs.source_tag }}
+        run: |
+          set -euo pipefail
+          if gh api "repos/${SRC_GIT_REPO}/git/ref/tags/${GA_TAG}" --jq .ref >/dev/null 2>&1; then
+            echo "::notice::${SRC_GIT_REPO} already has tag ${GA_TAG}; skipping."
+            exit 0
+          fi
+
+          # The artifact being finalised was built from the source repo's
+          # v<GA>-develop-<NNN> commit; NNN is carried unchanged up the
+          # ladder, so recover it from the release-NNN staging tag.
+          NNN="${SOURCE_TAG##*-}"
+          DEV_TAG="${GA_TAG}-develop-${NNN}"
+          SHA=$(gh api "repos/${SRC_GIT_REPO}/git/ref/tags/${DEV_TAG}" --jq .object.sha)
+          TYPE=$(gh api "repos/${SRC_GIT_REPO}/git/ref/tags/${DEV_TAG}" --jq .object.type)
+          if [ "$TYPE" = "tag" ]; then
+            # Annotated tag (sm-ci stamps them with -a): deref to the commit.
+            SHA=$(gh api "repos/${SRC_GIT_REPO}/git/tags/${SHA}" --jq .object.sha)
+          fi
+
+          gh api "repos/${SRC_GIT_REPO}/git/refs" -f ref="refs/tags/${GA_TAG}" -f sha="$SHA" --jq .ref
+          echo "::notice::tagged ${SRC_GIT_REPO}@${SHA} as ${GA_TAG} (develop counter resets to 001)"
 
       - name: Open Cargo bump PR in source repo
         if: steps.map.outputs.skip == 'false'
