@@ -20,9 +20,9 @@ name: Publish release
 #   - Actions:Read on the source repo  (to download artifacts)
 #   - Contents:Write on this repo      (to create releases)
 #
-# Source-repo owner is whitelisted (3400-0000-SM-Software only) so a
-# stolen dispatch token from elsewhere can't smuggle arbitrary content
-# into our releases.
+# Source-repo owner is whitelisted (the SimpleMotion builder orgs only)
+# so a stolen dispatch token from elsewhere can't smuggle arbitrary
+# content into our releases.
 #
 # Channel-per-repo architecture: each of simplemotion/{release,preview,
 # private,testing} hosts its own channel. We do NOT use the prerelease
@@ -101,6 +101,7 @@ jobs:
           REPO_NAME="${SOURCE_REPO#*/}"
           case "$OWNER" in
             3400-0000-SM-Software) ;;
+            3404-0000-SM-Simplicity-v04) ;;
             *)
               echo "::error::source_repo owner '$OWNER' is not whitelisted" >&2
               exit 1
