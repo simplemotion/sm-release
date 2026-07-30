@@ -10,9 +10,9 @@ This repo hosts release-asset binaries for the **release** channel. Releases lan
 
 ## Changelog
 
-| Version | Date | Author | Notes |
-|---------|------|--------|-------|
-| _(no releases yet)_ | | | |
+| Version | Hash | Date | Author | Notes |
+|---------|------|------|--------|-------|
+| _(no releases yet)_ | | | | |
 
 The first release tag will be `v0.1.0`.
 
