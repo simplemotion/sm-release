@@ -24,6 +24,7 @@ This repo hosts release-asset binaries for the **release** channel. Releases lan
 
 | Version | Hash | Date | Author | Notes |
 |---------|------|------|--------|-------|
+| — | — | 2026-08-17 01:58 UTC | Greg Gowans | Retired two obsolete workflows: `sm-promote.yml` (promotion now runs from `3400-0000-SM-Software/3400-9993-SM-Publish`, "Promote up the channel ladder", cross-repo via scoped SM-Binary-Bridge tokens) and `sm-ci.yml` (this repo holds no source code, and as a **public** repo it can never call the internal `simplemotion/sm-ci` reusable workflow — every run since 2026-07-11 was a zero-job `startup_failure`). `sm-publish-release.yml` is untouched and still live. Channel repos are becoming pure artifact stores. |
 | _(no releases yet)_ | | | | |
 
 The first release tag will be `v0.1.0`.
