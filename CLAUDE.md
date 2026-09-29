@@ -39,7 +39,7 @@ The receiver is `.github/workflows/sm-publish-release.yml`. It uses the SM-Binar
 
 - **Public visibility is load-bearing.** Anything committed here is permanently public; do not paste internal docs, customer info, or credentials.
 - **No "Co-Authored-By" trailers** in commits.
-- **All IP assigned to SimpleMotion.Global Pty Ltd** per `ASSIGN.md`.
+- **All IP assigned to SimpleMotion.Design Pty Ltd (ACN 611 618 770)** per `ASSIGN.md`.
 - **No binaries in git history.** Binaries are GitHub Release assets only. Keep the working tree small.
 - **Versioning follows the SimpleMotion enterprise policy** (see appendix in `CHANGE.md`).
 
