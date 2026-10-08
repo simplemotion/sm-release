@@ -15,7 +15,7 @@ GitHub Release assets — one release per product version, three files per platf
 <package>-<host-triple>.sigstore.jsonl   ← sigstore build-provenance bundle
 ```
 
-where `<host-triple>` is `aarch64-apple-darwin`, `x86_64-apple-darwin`, `aarch64-unknown-linux-gnu`, `x86_64-unknown-linux-gnu`, `aarch64-pc-windows-msvc`, or `x86_64-pc-windows-msvc`.
+where `<host-triple>` is `aarch64-apple-darwin` (Apple silicon; Intel Macs are not supported since 2026-10-08), `aarch64-unknown-linux-gnu`, `x86_64-unknown-linux-gnu`, `aarch64-pc-windows-msvc`, or `x86_64-pc-windows-msvc`.
 
 ## How to install
 
