@@ -1,4 +1,4 @@
-# simplemotion/sm-release
+# simplemotion/sm-release-external
 
 **Release channel** binary-distribution surface for SimpleMotion products.
 
@@ -33,14 +33,14 @@ See [`simplemotion/sm-install/SECURE.md`](https://github.com/simplemotion/sm-ins
 
 Releases arrive automatically via `repository_dispatch` from per-product source repos under `3400-0000-SM-Software`. The source-repo `release.yml` tag-routes by suffix. The package path selects the column:
 
-| Tag pattern | Public-path repo | Internal-path repo |
+| Tag pattern | External-path repo | Internal-path repo |
 |---|---|---|
-| `vX.Y.Z` | `simplemotion/sm-release` | `simplemotion/sm-release-internal` |
-| `vX.Y.Z-preview-NNN` | `simplemotion/sm-preview` | `simplemotion/sm-preview-internal` |
-| `vX.Y.Z-develop-NNN` | `simplemotion/sm-develop` | `simplemotion/sm-develop-internal` |
-| `vX.Y.Z-testing-NNN` | `simplemotion/sm-testing` | `simplemotion/sm-testing-internal` |
+| `vX.Y.Z` | `simplemotion/sm-release-external` | `simplemotion/sm-release-internal` |
+| `vX.Y.Z-preview-NNN` | `simplemotion/sm-preview-external` | `simplemotion/sm-preview-internal` |
+| `vX.Y.Z-develop-NNN` | `simplemotion/sm-develop-external` | `simplemotion/sm-develop-internal` |
+| `vX.Y.Z-testing-NNN` | `simplemotion/sm-testing-external` | `simplemotion/sm-testing-internal` |
 
-Only public-path packages land here.
+Only external-path packages land here.
 
 The receiver workflow here (`sm-publish-release.yml`) downloads the source-run artifacts and creates a GitHub Release.
 

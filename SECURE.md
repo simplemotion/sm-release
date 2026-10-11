@@ -10,9 +10,9 @@
   <em>Engineered for Architecture, Entertainment, Industry and Manufacturing.</em>
 </p>
 
-# SECURE — simplemotion/sm-release
+# SECURE — simplemotion/sm-release-external
 
-> Security posture, threat model, and secrets-handling notes for `simplemotion/sm-release`.
+> Security posture, threat model, and secrets-handling notes for `simplemotion/sm-release-external`.
 
 ## What this repo serves
 
