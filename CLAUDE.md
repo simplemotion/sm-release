@@ -11,15 +11,21 @@ Guidance for Claude Code working in this repository.
 
 Releases here are GitHub Release assets (binaries + `.sha256` + `.sigstore.jsonl`). No source code lives here — this repo is purely a distribution surface.
 
-## Four-repo architecture
+## Channel repos
 
 | Repo | Visibility | Role |
 |---|---|---|
 | `simplemotion/sm-install` | public | Installer scripts and the installer site. The [README](https://github.com/simplemotion/sm-install#readme) gives the URLs. |
-| `simplemotion/sm-release` | public | Production binaries |
-| `simplemotion/sm-preview` | public | Preview / beta binaries |
-| `simplemotion/sm-develop` | internal | Development — earliest builds |
-| `simplemotion/sm-testing` | private | In-flight test builds |
+| `simplemotion/sm-release` | public | Public path: production binaries |
+| `simplemotion/sm-preview` | public | Public path: preview binaries |
+| `simplemotion/sm-develop` | private | Public path: earliest builds |
+| `simplemotion/sm-testing` | private | Public path: test builds |
+| `simplemotion/sm-release-internal` | private | Internal path: production binaries |
+| `simplemotion/sm-preview-internal` | private | Internal path: preview binaries |
+| `simplemotion/sm-develop-internal` | private | Internal path: earliest builds |
+| `simplemotion/sm-testing-internal` | private | Internal path: test builds |
+
+A public-path package is listed in `channels/public-packages.txt` in `3400-0000-SM-Software/3400-9993-SM-Publish`. Every other package is on the internal path. An internal package never touches a public-path repo.
 
 Each channel has its own `releases/latest` namespace, so the repos do not use the prerelease flag. Consumers select this channel with `--channel release` in the installer. Staff use the internal installer copy. Freelance and customers cohorts use the external installer copy. Do not write the installer URL in this repo. The [sm-install README](https://github.com/simplemotion/sm-install#readme) is the single source for it.
 
@@ -61,14 +67,16 @@ Before adding new top-level files or changing `sm-publish-release.yml`'s dispatc
 Builds climb the ladder **without rebuilding** — the same signed
 artifacts move forward. The two **public** channels (`preview`,
 `release`) only ever show **real releases**; all candidate churn stays
-on the **internal** channels, so the public never sees a non-final build.
+on the **private** channels, so the public never sees a non-final build.
 
-| Stage   | Repo                      | Visibility | Holds                            | Tag form                          |
-|---------|---------------------------|------------|----------------------------------|-----------------------------------|
-| develop | `simplemotion/sm-develop` | internal   | earliest dev builds              | `v0.1.0-develop-N`                |
-| testing | `simplemotion/sm-testing` | internal   | test builds + release candidates | `v0.1.0-testing-N`, `v0.1.0-rcN` |
-| preview | `simplemotion/sm-preview` | public     | public preview / beta releases   | `v0.1.0-preview-N`                |
-| release | `simplemotion/sm-release` | public     | **GA only**                      | `v0.1.0` (bare, Latest)           |
+There are two discrete paths. Each path is develop → testing → preview → release.
+
+| Stage | Public-path repo | Internal-path repo | Holds | Tag form |
+|---|---|---|---|---|
+| develop | `simplemotion/sm-develop` (private) | `simplemotion/sm-develop-internal` (private) | earliest dev builds | `v0.1.0-develop-N` |
+| testing | `simplemotion/sm-testing` (private) | `simplemotion/sm-testing-internal` (private) | test builds + release candidates | `v0.1.0-testing-N`, `v0.1.0-rcN` |
+| preview | `simplemotion/sm-preview` (public) | `simplemotion/sm-preview-internal` (private) | preview / beta releases | `v0.1.0-preview-N` |
+| release | `simplemotion/sm-release` (public) | `simplemotion/sm-release-internal` (private) | **GA only** | `v0.1.0` (bare, Latest) |
 
 Flow: `develop → testing (→ rcN) → preview → release (GA)`. Release
 candidates (`v0.1.0-rcN`) are vetted **internally on testing**; once

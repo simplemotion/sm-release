@@ -31,14 +31,16 @@ See [`simplemotion/sm-install/SECURE.md`](https://github.com/simplemotion/sm-ins
 
 ## How releases get here
 
-Releases arrive automatically via `repository_dispatch` from per-product source repos under `3400-0000-SM-Software`. The source-repo `release.yml` tag-routes by suffix:
+Releases arrive automatically via `repository_dispatch` from per-product source repos under `3400-0000-SM-Software`. The source-repo `release.yml` tag-routes by suffix. The package path selects the column:
 
-| Tag pattern | Target repo |
-|---|---|
-| `vX.Y.Z` | `simplemotion/sm-release` |
-| `vX.Y.Z-preview-NNN` | `simplemotion/sm-preview` |
-| `vX.Y.Z-develop-NNN` | `simplemotion/sm-develop` |
-| `vX.Y.Z-testing-NNN` | `simplemotion/sm-testing` |
+| Tag pattern | Public-path repo | Internal-path repo |
+|---|---|---|
+| `vX.Y.Z` | `simplemotion/sm-release` | `simplemotion/sm-release-internal` |
+| `vX.Y.Z-preview-NNN` | `simplemotion/sm-preview` | `simplemotion/sm-preview-internal` |
+| `vX.Y.Z-develop-NNN` | `simplemotion/sm-develop` | `simplemotion/sm-develop-internal` |
+| `vX.Y.Z-testing-NNN` | `simplemotion/sm-testing` | `simplemotion/sm-testing-internal` |
+
+Only public-path packages land here.
 
 The receiver workflow here (`sm-publish-release.yml`) downloads the source-run artifacts and creates a GitHub Release.
 
