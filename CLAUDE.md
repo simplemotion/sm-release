@@ -15,13 +15,13 @@ Releases here are GitHub Release assets (binaries + `.sha256` + `.sigstore.jsonl
 
 | Repo | Visibility | Role |
 |---|---|---|
-| `simplemotion/sm-install` | public | Installer scripts + `install.simplemotion.com` Pages |
+| `simplemotion/sm-install` | public | Installer scripts and the installer site. The [README](https://github.com/simplemotion/sm-install#readme) gives the URLs. |
 | `simplemotion/sm-release` | public | Production binaries |
 | `simplemotion/sm-preview` | public | Preview / beta binaries |
 | `simplemotion/sm-develop` | internal | Development — earliest builds |
 | `simplemotion/sm-testing` | private | In-flight test builds |
 
-Each channel has its own `releases/latest` namespace — no prerelease-flag coordination across repos. Consumers reach this channel via `--channel release` in the installer scripts at `install.simplemotion.com`.
+Each channel has its own `releases/latest` namespace, so the repos do not use the prerelease flag. Consumers select this channel with `--channel release` in the installer. Staff use the internal installer copy. Freelance and customers cohorts use the external installer copy. Do not write the installer URL in this repo. The [sm-install README](https://github.com/simplemotion/sm-install#readme) is the single source for it.
 
 ## How releases land here
 
