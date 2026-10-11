@@ -19,11 +19,9 @@ where `<host-triple>` is `aarch64-apple-darwin` (Apple silicon; Intel Macs are n
 
 ## How to install
 
-Use the SimpleMotion installer at `install.simplemotion.com` and pass `--channel release`:
+Use the SimpleMotion installer and select this channel with `--channel release`. Executive and employees cohorts use the internal installer copy. Freelance and customers cohorts use the external installer copy. `release` is the default channel, so you can omit `--channel release`.
 
-```bash
-bash -c "$(curl -fsSL https://install.simplemotion.com/sm-welcome.sh)" sm-welcome --channel release
-```
+The [`simplemotion/sm-install` README](https://github.com/simplemotion/sm-install#readme) gives the install commands for each copy. This repo does not copy those commands, because the installer URL can change.
 
 The installer (in [`simplemotion/sm-install`](https://github.com/simplemotion/sm-install)) handles platform detection, SHA verification, sigstore attestation verification, and install. Don't fetch binaries directly from this repo unless you're verifying them out-of-band.
 
