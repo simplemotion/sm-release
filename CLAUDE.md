@@ -4,7 +4,7 @@ Guidance for Claude Code working in this repository.
 
 ## What this repo is
 
-`simplemotion/sm-release` is the **public** binary-distribution surface for SimpleMotion's **release** channel.
+`simplemotion/sm-release-external` is the **public** binary-distribution surface for SimpleMotion's **release** channel.
 
 - **Audience:** All consumers — stable production builds.
 - **Stability:** Stable. Promoted from `preview` after validation. Owns `releases/latest` of this repo.
@@ -16,22 +16,22 @@ Releases here are GitHub Release assets (binaries + `.sha256` + `.sigstore.jsonl
 | Repo | Visibility | Role |
 |---|---|---|
 | `simplemotion/sm-install` | public | Installer scripts and the installer site. The [README](https://github.com/simplemotion/sm-install#readme) gives the URLs. |
-| `simplemotion/sm-release` | public | Public path: production binaries |
-| `simplemotion/sm-preview` | public | Public path: preview binaries |
-| `simplemotion/sm-develop` | private | Public path: earliest builds |
-| `simplemotion/sm-testing` | private | Public path: test builds |
+| `simplemotion/sm-release-external` | public | External path: production binaries |
+| `simplemotion/sm-preview-external` | public | External path: preview binaries |
+| `simplemotion/sm-develop-external` | private | External path: earliest builds |
+| `simplemotion/sm-testing-external` | private | External path: test builds |
 | `simplemotion/sm-release-internal` | private | Internal path: production binaries |
 | `simplemotion/sm-preview-internal` | private | Internal path: preview binaries |
 | `simplemotion/sm-develop-internal` | private | Internal path: earliest builds |
 | `simplemotion/sm-testing-internal` | private | Internal path: test builds |
 
-A public-path package is listed in `channels/public-packages.txt` in `3400-0000-SM-Software/3400-9993-SM-Publish`. Every other package is on the internal path. An internal package never touches a public-path repo.
+A external-path package is listed in `channels/external-packages.txt` in `3400-0000-SM-Software/3400-9993-SM-Publish`. Every other package is on the internal path. An internal package never touches a external-path repo.
 
 Each channel has its own `releases/latest` namespace, so the repos do not use the prerelease flag. Consumers select this channel with `--channel release` in the installer. Staff use the internal installer copy. Freelance and customers cohorts use the external installer copy. Do not write the installer URL in this repo. The [sm-install README](https://github.com/simplemotion/sm-install#readme) is the single source for it.
 
 ## How releases land here
 
-Releases arrive via `repository_dispatch` from per-product source repos (in the `3400-0000-SM-Software` org). Source-repo `release.yml` workflows tag-route to the channel-appropriate target: bare `vX.Y.Z` → `simplemotion/sm-release`; `vX.Y.Z-preview-NNN` → `simplemotion/sm-preview`; `vX.Y.Z-develop-NNN` → `simplemotion/sm-develop`; `vX.Y.Z-testing-NNN` → `simplemotion/sm-testing`.
+Releases arrive via `repository_dispatch` from per-product source repos (in the `3400-0000-SM-Software` org). Source-repo `release.yml` workflows tag-route to the channel-appropriate target: bare `vX.Y.Z` → `simplemotion/sm-release-external`; `vX.Y.Z-preview-NNN` → `simplemotion/sm-preview-external`; `vX.Y.Z-develop-NNN` → `simplemotion/sm-develop-external`; `vX.Y.Z-testing-NNN` → `simplemotion/sm-testing-external`.
 
 The receiver is `.github/workflows/sm-publish-release.yml`. It uses the SM-Binary-Bridge App to download artifacts from the source run and `gh release create` them here.
 
@@ -71,12 +71,12 @@ on the **private** channels, so the public never sees a non-final build.
 
 There are two discrete paths. Each path is develop → testing → preview → release.
 
-| Stage | Public-path repo | Internal-path repo | Holds | Tag form |
+| Stage | External-path repo | Internal-path repo | Holds | Tag form |
 |---|---|---|---|---|
-| develop | `simplemotion/sm-develop` (private) | `simplemotion/sm-develop-internal` (private) | earliest dev builds | `v0.1.0-develop-N` |
-| testing | `simplemotion/sm-testing` (private) | `simplemotion/sm-testing-internal` (private) | test builds + release candidates | `v0.1.0-testing-N`, `v0.1.0-rcN` |
-| preview | `simplemotion/sm-preview` (public) | `simplemotion/sm-preview-internal` (private) | preview / beta releases | `v0.1.0-preview-N` |
-| release | `simplemotion/sm-release` (public) | `simplemotion/sm-release-internal` (private) | **GA only** | `v0.1.0` (bare, Latest) |
+| develop | `simplemotion/sm-develop-external` (private) | `simplemotion/sm-develop-internal` (private) | earliest dev builds | `v0.1.0-develop-N` |
+| testing | `simplemotion/sm-testing-external` (private) | `simplemotion/sm-testing-internal` (private) | test builds + release candidates | `v0.1.0-testing-N`, `v0.1.0-rcN` |
+| preview | `simplemotion/sm-preview-external` (public) | `simplemotion/sm-preview-internal` (private) | preview / beta releases | `v0.1.0-preview-N` |
+| release | `simplemotion/sm-release-external` (public) | `simplemotion/sm-release-internal` (private) | **GA only** | `v0.1.0` (bare, Latest) |
 
 Flow: `develop → testing (→ rcN) → preview → release (GA)`. Release
 candidates (`v0.1.0-rcN`) are vetted **internally on testing**; once
@@ -85,7 +85,7 @@ bare **`v0.1.0` GA** on `release` (always marked Latest).
 
 **No GitHub prerelease flag is used anywhere** — identity is the repo
 (and its visibility), and the public repos simply never receive a
-non-preview / non-GA tag. `sm-release` accepts **only bare `vX.Y.Z`
+non-preview / non-GA tag. `sm-release-external` accepts **only bare `vX.Y.Z`
 (GA)** promotion targets; cut rc/preview builds on `testing`/`preview`.
 
 Each receiving channel repo has `.github/workflows/sm-promote.yml`
