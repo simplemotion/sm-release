@@ -15,7 +15,7 @@ Releases here are GitHub Release assets (binaries + `.sha256` + `.sigstore.jsonl
 
 | Repo | Visibility | Role |
 |---|---|---|
-| `simplemotion/sm-install` | public | Installer scripts and the installer site. The [README](https://github.com/simplemotion/sm-install#readme) gives the URLs. |
+| `simplemotion/sm-install-int` | public | Installer scripts and the installer site. The [README](https://github.com/simplemotion/sm-install-int#readme) gives the URLs. |
 | `simplemotion/sm-release-external` | public | External path: production binaries |
 | `simplemotion/sm-preview-external` | public | External path: preview binaries |
 | `simplemotion/sm-develop-external` | private | External path: earliest builds |
@@ -27,7 +27,7 @@ Releases here are GitHub Release assets (binaries + `.sha256` + `.sigstore.jsonl
 
 A external-path package is listed in `channels/external-packages.txt` in `3400-0000-SM-Software/3400-9993-SM-Publish`. Every other package is on the internal path. An internal package never touches a external-path repo.
 
-Each channel has its own `releases/latest` namespace, so the repos do not use the prerelease flag. Consumers select this channel with `--channel release` in the installer. Staff use the internal installer copy. Freelance and customers cohorts use the external installer copy. Do not write the installer URL in this repo. The [sm-install README](https://github.com/simplemotion/sm-install#readme) is the single source for it.
+Each channel has its own `releases/latest` namespace, so the repos do not use the prerelease flag. Consumers select this channel with `--channel release` in the installer. Staff use the internal installer copy. Freelance and customers cohorts use the external installer copy. Do not write the installer URL in this repo. The [sm-install-int README](https://github.com/simplemotion/sm-install-int#readme) is the single source for it.
 
 ## How releases land here
 
@@ -37,7 +37,7 @@ The receiver is `.github/workflows/sm-publish-release.yml`. It uses the SM-Binar
 
 ## What this repo is NOT
 
-- **Not the installer.** Installer scripts live in `simplemotion/sm-install` and route here via `--channel release`.
+- **Not the installer.** Installer scripts live in `simplemotion/sm-install-int`. They come here when you use `--channel release`.
 - **Not the source.** Per-product source repos under `3400-0000-SM-Software` build the binaries that land here.
 - **Not the build pipeline.** Builds run in the source repos; this repo only receives + publishes.
 

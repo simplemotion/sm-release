@@ -21,13 +21,13 @@ where `<host-triple>` is `aarch64-apple-darwin` (Apple silicon; Intel Macs are n
 
 Use the SimpleMotion installer and select this channel with `--channel release`. Executive and employees cohorts use the internal installer copy. Freelance and customers cohorts use the external installer copy. `release` is the default channel, so you can omit `--channel release`.
 
-The [`simplemotion/sm-install` README](https://github.com/simplemotion/sm-install#readme) gives the install commands for each copy. This repo does not copy those commands, because the installer URL can change.
+The [`simplemotion/sm-install-int` README](https://github.com/simplemotion/sm-install-int#readme) gives the install commands for each copy. This repo does not copy those commands, because the installer URL can change.
 
-The installer (in [`simplemotion/sm-install`](https://github.com/simplemotion/sm-install)) handles platform detection, SHA verification, sigstore attestation verification, and install. Don't fetch binaries directly from this repo unless you're verifying them out-of-band.
+The installer (in [`simplemotion/sm-install-int`](https://github.com/simplemotion/sm-install-int)) handles platform detection, SHA verification, sigstore attestation verification, and install. Do not download binaries directly from this repo, except to do a check of them out of band.
 
 ## Verification
 
-See [`simplemotion/sm-install/SECURE.md`](https://github.com/simplemotion/sm-install/blob/main/SECURE.md) for the consumer verification recipe (`gh attestation verify --bundle …`).
+See [`simplemotion/sm-install-int/SECURE.md`](https://github.com/simplemotion/sm-install-int/blob/main/SECURE.md) for the consumer verification recipe (`gh attestation verify --bundle …`).
 
 ## How releases get here
 
@@ -46,6 +46,6 @@ The receiver workflow here (`sm-publish-release.yml`) downloads the source-run a
 
 ## Reporting issues
 
-- **Distribution / install bugs:** open an issue on [`simplemotion/sm-install`](https://github.com/simplemotion/sm-install).
+- **Distribution / install bugs:** open an issue on [`simplemotion/sm-install-int`](https://github.com/simplemotion/sm-install-int).
 - **Product bugs:** per-product source repo under `3400-0000-SM-Software` (internal).
 - **Security:** email **security@simplemotion.com**.

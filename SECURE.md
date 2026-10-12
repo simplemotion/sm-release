@@ -20,7 +20,7 @@ This is the **public** binary-distribution surface for SimpleMotion's **release*
 
 - No source code.
 - No build pipelines (those live in the per-product source repos).
-- No installer scripts (those live in `simplemotion/sm-install`).
+- No installer scripts (those live in `simplemotion/sm-install-int`).
 
 ## Threat model
 
@@ -37,7 +37,7 @@ This is the **public** binary-distribution surface for SimpleMotion's **release*
 
 ## Consumer verification
 
-See [`simplemotion/sm-install/SECURE.md`](https://github.com/simplemotion/sm-install/blob/main/SECURE.md) for the full `gh attestation verify --bundle …` recipe. The verification is offline (Sigstore TUF root + Fulcio cert chain travel inside the bundle) and works without GitHub API access.
+See [`simplemotion/sm-install-int/SECURE.md`](https://github.com/simplemotion/sm-install-int/blob/main/SECURE.md) for the full `gh attestation verify --bundle …` recipe. The verification is offline (Sigstore TUF root + Fulcio cert chain travel inside the bundle) and works without GitHub API access.
 
 ## Reporting issues
 
